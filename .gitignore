@@ -1,0 +1,24 @@
+# Original reference project (not tracked)
+IMAGE_15EG/
+
+# Generated Vivado project directory
+IMAGE_15EG_TCL/
+
+# Hardware export files
+*.xsa
+
+# Vivado log and journal files
+*.jou
+*.log
+*.str
+
+# Vivado cache and hidden directories
+.Xil/
+.cache/
+.hw/
+.sim/
+.str/
+
+# Operating system files
+.DS_Store
+Thumbs.db
