@@ -386,3 +386,22 @@ set_property C_CLK_INPUT_FREQ_HZ 300000000 [get_debug_cores dbg_hub]
 set_property C_ENABLE_CLK_DIVIDER false [get_debug_cores dbg_hub]
 set_property C_USER_SCAN_CHAIN 1 [get_debug_cores dbg_hub]
 connect_debug_port dbg_hub/clk [get_nets clk]
+
+# ----------------------------------------------------------------------------------
+# 10G SFP1 Transceiver Constraints (Bank 129)
+# ----------------------------------------------------------------------------------
+# The GT transceiver pins (gt_rx_p/n, gt_tx_p/n) and mgtrefclk_p/n are dedicated
+# hardware pins on Bank 129. Vivado block automation using QUAD_129 locations 
+# them automatically, so explicit PACKAGE_PIN definitions for RX/TX/CLK are usually
+# not provided. The 156.25MHz reference clock should be MGTREFCLK0 129.
+
+# SFP1 TX Disable: Drive LOW to enable laser. 
+# Based on layout analysis, SFP1_TX_DIS routes through J3 connector near B49/B50 pins.
+# We map it to B49_L11_P (pin E12) as a best-effort derived from the schematic.
+# If laser does not activate, verify J3 pin 109/111 mapping for SFP1_TX_DIS.
+set_property PACKAGE_PIN E12 [get_ports sfp1_tx_disable]
+set_property IOSTANDARD LVCMOS18 [get_ports sfp1_tx_disable]
+
+# (Optional) SFP1 LOSS pin
+# set_property PACKAGE_PIN A12 [get_ports sfp1_loss] 
+# set_property IOSTANDARD LVCMOS18 [get_ports sfp1_loss]
