@@ -1417,8 +1417,3 @@ create_root_design ""
 common::send_gid_msg -ssname BD::TCL -id 2053 -severity "WARNING" "This Tcl script was generated from a block design that has not been validated. It is possible that design <$design_name> may result in errors during validation."
 
 
-# Add 10G SFP TX Disable pin mapping explicitly to the generated script
-create_bd_port -dir O sfp1_tx_disable
-create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 sfp1_tx_disable_const
-set_property CONFIG.CONST_VAL {0} [get_bd_cells sfp1_tx_disable_const]
-connect_bd_net [get_bd_pins sfp1_tx_disable_const/dout] [get_bd_ports sfp1_tx_disable]

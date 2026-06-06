@@ -399,9 +399,10 @@ connect_debug_port dbg_hub/clk [get_nets clk]
 # Based on layout analysis, SFP1_TX_DIS routes through J3 connector near B49/B50 pins.
 # We map it to B49_L11_P (pin E12) as a best-effort derived from the schematic.
 # If laser does not activate, verify J3 pin 109/111 mapping for SFP1_TX_DIS.
-set_property PACKAGE_PIN E12 [get_ports sfp1_tx_disable]
-set_property IOSTANDARD LVCMOS18 [get_ports sfp1_tx_disable]
 
 # (Optional) SFP1 LOSS pin
 # set_property PACKAGE_PIN A12 [get_ports sfp1_loss] 
 # set_property IOSTANDARD LVCMOS18 [get_ports sfp1_loss]
+
+set_property PACKAGE_PIN L27 [get_ports sfp1_refclk_clk_p]
+set_property PACKAGE_PIN L28 [get_ports sfp1_refclk_clk_n]
