@@ -22,3 +22,4 @@ IMAGE_15EG_TCL/
 # Operating system files
 .DS_Store
 Thumbs.db
+petalinux_prj/
