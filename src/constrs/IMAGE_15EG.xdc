@@ -391,18 +391,29 @@ connect_debug_port dbg_hub/clk [get_nets clk]
 # 10G SFP1 Transceiver Constraints (Bank 129)
 # ----------------------------------------------------------------------------------
 # The GT transceiver pins (gt_rx_p/n, gt_tx_p/n) and mgtrefclk_p/n are dedicated
-# hardware pins on Bank 129. Vivado block automation using QUAD_129 locations 
+# hardware pins on Bank 129. Vivado block automation using QUAD_129 places 
 # them automatically, so explicit PACKAGE_PIN definitions for RX/TX/CLK are usually
 # not provided. The 156.25MHz reference clock should be MGTREFCLK0 129.
 
-# SFP1 TX Disable: Drive LOW to enable laser. 
-# Based on layout analysis, SFP1_TX_DIS routes through J3 connector near B49/B50 pins.
-# Since GPIO_1_tri_io[1] is already mapped to E12, the OS controls this pin.
-# If laser does not activate, check GPIO_1[1] state in Linux.
+# ==================================================================================
+# 4-Channel SFP Transceiver Control (TX Disable) hardware tie-off (Tied to Constant 0)
+# ==================================================================================
+# Since these signals are on Bank 49 which operates on a 3.3V VCCO (as verified by 
+# UART_1_0_rxd and EMIO_tri_io[10-15] also present in Bank 49), they must use LVCMOS33.
+# By driving these low (0) in Block Design via sfp_en_logic, the hardware permanently
+# enables the SFP lasers for optical transmission.
 
-# (Optional) SFP1 LOSS pin
-# set_property PACKAGE_PIN A12 [get_ports sfp1_loss] 
-# set_property IOSTANDARD LVCMOS18 [get_ports sfp1_loss]
+set_property PACKAGE_PIN A12 [get_ports sfp1_tx_dis]
+set_property IOSTANDARD LVCMOS33 [get_ports sfp1_tx_dis]
+
+set_property PACKAGE_PIN B14 [get_ports sfp2_tx_dis]
+set_property IOSTANDARD LVCMOS33 [get_ports sfp2_tx_dis]
+
+set_property PACKAGE_PIN A15 [get_ports sfp3_tx_dis]
+set_property IOSTANDARD LVCMOS33 [get_ports sfp3_tx_dis]
+
+set_property PACKAGE_PIN A16 [get_ports sfp4_tx_dis]
+set_property IOSTANDARD LVCMOS33 [get_ports sfp4_tx_dis]
 
 set_property PACKAGE_PIN L27 [get_ports sfp1_refclk_clk_p]
 set_property PACKAGE_PIN L28 [get_ports sfp1_refclk_clk_n]

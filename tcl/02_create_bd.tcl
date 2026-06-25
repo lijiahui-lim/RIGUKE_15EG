@@ -117,9 +117,19 @@ apply_bd_automation -rule xilinx.com:bd_rule:axi4 -config { Clk_master {Auto} Cl
 connect_bd_net [get_bd_pins axi_dma_0/mm2s_introut] [get_bd_pins xlconcat_0/In2]
 connect_bd_net [get_bd_pins axi_dma_0/s2mm_introut] [get_bd_pins xlconcat_0/In3]
 
-# 7. SFP1 TX Disable control
-# In the original design, GPIO_1_tri_io[1] is already mapped to pin E12 (sfp1_tx_dis).
-# Thus, we do not need to instantiate a static tie-off port, allowing OS-level GPIO driver control.
+# 7. SFP TX Disable controls for 4 channels (Tied LOW to permanently enable transmitters)
+set sfp1_tx_dis [ create_bd_port -dir O sfp1_tx_dis ]
+set sfp2_tx_dis [ create_bd_port -dir O sfp2_tx_dis ]
+set sfp3_tx_dis [ create_bd_port -dir O sfp3_tx_dis ]
+set sfp4_tx_dis [ create_bd_port -dir O sfp4_tx_dis ]
+
+set sfp_en_logic [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 sfp_en_logic ]
+set_property CONFIG.CONST_VAL {0} $sfp_en_logic
+
+connect_bd_net [get_bd_pins sfp_en_logic/dout] [get_bd_ports sfp1_tx_dis]
+connect_bd_net [get_bd_pins sfp_en_logic/dout] [get_bd_ports sfp2_tx_dis]
+connect_bd_net [get_bd_pins sfp_en_logic/dout] [get_bd_ports sfp3_tx_dis]
+connect_bd_net [get_bd_pins sfp_en_logic/dout] [get_bd_ports sfp4_tx_dis]
 
 # 8. Validate and map memory properly
 assign_bd_address
