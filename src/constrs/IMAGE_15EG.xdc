@@ -409,6 +409,10 @@ set_property IOSTANDARD LVCMOS33 [get_ports sfp1_tx_dis]
 set_property PACKAGE_PIN B14 [get_ports sfp2_tx_dis]
 set_property IOSTANDARD LVCMOS33 [get_ports sfp2_tx_dis]
 
+set_property PACKAGE_PIN A13 [get_ports sfp1_loss]
+set_property IOSTANDARD LVCMOS33 [get_ports sfp1_loss]
+set_property PULLDOWN TRUE [get_ports sfp1_loss]
+
 set_property PACKAGE_PIN A15 [get_ports sfp3_tx_dis]
 set_property IOSTANDARD LVCMOS33 [get_ports sfp3_tx_dis]
 
