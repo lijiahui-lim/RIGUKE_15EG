@@ -49,8 +49,10 @@ echo "Configuring project with hardware platform..."
 set -e
 
 # --silentconfig applies the default configuration non-interactively
-petalinux-config --get-hw-description="$XSA_FILE" --silentconfig
+petalinux-config --get-hw-description="$XSA_FILE" 
 set +e
+
+petalinux-config -c rootfs 
 
 # ==========================================
 # Build
