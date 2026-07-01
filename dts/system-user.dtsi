@@ -1,0 +1,46 @@
+/include/ "system-conf.dtsi"
+/ {
+	leds {
+		compatible = "gpio-leds";
+
+		ps_led1 {
+			label = "PS_LED1";
+			gpios = <&gpio 35 0>; /* MIO35, Active High */
+			default-state = "off";
+		};
+
+		ps_led2 {
+			label = "PS_LED2";
+			gpios = <&gpio 26 0>; /* MIO26, Active High */
+			default-state = "off";
+		};
+
+		ps_led3 {
+			label = "PS_LED3";
+			gpios = <&gpio 31 0>; /* MIO31, Active High */
+			linux,default-trigger = "heartbeat";
+		};
+
+		ps_led4 {
+			label = "PS_LED4";
+			gpios = <&gpio 41 0>; /* MIO41, Active High */
+			default-state = "on";
+		};
+	};
+};
+
+&gpio {
+	status = "okay";
+};
+
+&psu_ethernet_0_mdio {
+	phy1: phy@1 {
+		reg = <1>;
+	};
+};
+
+&sdhci1 {
+	status = "okay";
+	disable-wp;
+	no-1-8-v;
+};
