@@ -1,5 +1,10 @@
 /include/ "system-conf.dtsi"
 / {
+	chosen {
+		bootargs = "console=ttyPS0,115200 earlycon root=/dev/mmcblk1p2 rw rootwait";
+		stdout-path = "serial0:115200n8";
+	};
+
 	leds {
 		compatible = "gpio-leds";
 
@@ -27,16 +32,107 @@
 			default-state = "on";
 		};
 	};
+
+	tcm_0a: tcm@ffe00000 {
+		compatible = "mmio-sram";
+		reg = <0x0 0xffe00000 0x0 0x10000>;
+		power-domain = <&zynqmp_firmware 15>;
+	};
+
+	tcm_0b: tcm@ffe20000 {
+		compatible = "mmio-sram";
+		reg = <0x0 0xffe20000 0x0 0x10000>;
+		power-domain = <&zynqmp_firmware 16>;
+	};
+
+	tcm_1a: tcm@ffe90000 {
+		compatible = "mmio-sram";
+		reg = <0x0 0xffe90000 0x0 0x10000>;
+		power-domain = <&zynqmp_firmware 17>;
+	};
+
+	tcm_1b: tcm@ffeb0000 {
+		compatible = "mmio-sram";
+		reg = <0x0 0xffeb0000 0x0 0x10000>;
+		power-domain = <&zynqmp_firmware 18>;
+	};
+
+	rpu: rpu@ff9a0000 {
+		compatible = "xlnx,zynqmp-r5-remoteproc";
+		xlnx,cluster-mode = <1>; /* split：双核独立运行（0=lockstep，1=split） */
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		r5_0: r5@0 {
+			compatible = "xlnx,zynqmp-r5-remoteproc";
+			sram = <&tcm_0a>, <&tcm_0b>;
+			power-domain = <&zynqmp_firmware 7>;
+			mboxes = <&ipi_mailbox_rpu0 0>, <&ipi_mailbox_rpu0 1>;
+			mbox-names = "tx", "rx";
+		};
+
+		r5_1: r5@1 {
+			compatible = "xlnx,zynqmp-r5-remoteproc";
+			sram = <&tcm_1a>, <&tcm_1b>;
+			power-domain = <&zynqmp_firmware 8>;
+			mboxes = <&ipi_mailbox_rpu1 0>, <&ipi_mailbox_rpu1 1>;
+			mbox-names = "tx", "rx";
+		};
+	};
+};
+
+&zynqmp_ipi {
+	ipi_mailbox_rpu0: mailbox@ff990000 {
+		reg = <0x0 0xff990400 0x0 0x20>,
+		      <0x0 0xff990420 0x0 0x20>,
+		      <0x0 0xff990000 0x0 0x20>,
+		      <0x0 0xff990020 0x0 0x20>;
+		reg-names = "local_request_region",
+		            "local_response_region",
+		            "remote_request_region",
+		            "remote_response_region";
+		#mbox-cells = <1>;
+		xlnx,ipi-id = <1>;
+	};
+
+	ipi_mailbox_rpu1: mailbox@ff990200 {
+		reg = <0x0 0xff990400 0x0 0x20>,
+		      <0x0 0xff990420 0x0 0x20>,
+		      <0x0 0xff990200 0x0 0x20>,
+		      <0x0 0xff990220 0x0 0x20>;
+		reg-names = "local_request_region",
+		            "local_response_region",
+		            "remote_request_region",
+		            "remote_response_region";
+		#mbox-cells = <1>;
+		xlnx,ipi-id = <2>;
+	};
 };
 
 &gpio {
 	status = "okay";
 };
 
-&psu_ethernet_0_mdio {
-	phy1: phy@1 {
-		reg = <1>;
+&gem3 {
+	local-mac-address = [00 0a 35 00 00 02];
+	phy-handle = <&phy3>;
+	phy-mode = "rgmii-id";
+	mdio {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		phy3: phy@0 {
+			reg = <0>;
+		};
 	};
+};
+
+&xxv_ethernet_0 {
+	local-mac-address = [00 0a 35 00 00 03];
+};
+
+&axi_gpio_led {
+	status = "disabled"; /* PL LED 由 R5 固件独占控制 */
 };
 
 &sdhci1 {
