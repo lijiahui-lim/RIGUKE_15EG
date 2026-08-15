@@ -20,8 +20,6 @@ create_bd_cell -type ip -vlnv xilinx.com:ip:xxv_ethernet:4.1 xxv_ethernet_0
 set_property -dict [list \
   CONFIG.BASE_R_KR {BASE-R} \
   CONFIG.GT_GROUP_SELECT {Quad_X0Y2} \
-  CONFIG.LANE0_GT_LOC {X0Y8} \
-  CONFIG.LANE0_GT_REFCLK_SOURCE {IBUFDS_GTE4_X0Y4} \
   CONFIG.INCLUDE_AXI4_INTERFACE {1} \
   CONFIG.INCLUDE_USER_FIFO {1} \
   CONFIG.GT_REF_CLK_FREQ {156.25} \
@@ -59,7 +57,7 @@ set_property -dict [list \
 
 # 5. 时钟变量
 set pl_clk   [get_bd_pins zynq_ultra_ps_e_0/pl_clk0]  ;# 100MHz  控制面
-set pl_clk1  [get_bd_pins zynq_ultra_ps_e_0/pl_clk1]  ;# 375MHz  HP0数据面(高速)
+set pl_clk1  [get_bd_pins zynq_ultra_ps_e_0/pl_clk1]  ;# 300MHz  HP0数据面(SAXIGP2规格上限333MHz)
 set tx_clk   [get_bd_pins xxv_ethernet_0/tx_clk_out_0] ;# 156.25MHz
 set rx_clk   [get_bd_pins xxv_ethernet_0/rx_clk_out_0] ;# 156.25MHz
 
@@ -94,11 +92,11 @@ connect_bd_net [get_bd_pins dma_tx_rst/Res] [get_bd_pins xxv_ethernet_0/tx_reset
 
 # 8. AXI Interconnect 数据通路（替代 SmartConnect）
 # AXI Interconnect 支持每端口独立时钟：
-#   ACLK = pl_clk1 (375MHz) — 交叉开关时钟(高速，避免节流)
+#   ACLK = pl_clk1 (300MHz) — 交叉开关时钟(高速，避免节流)
 #   S00_ACLK = pl_clk (100MHz) — SG同域
 #   S01_ACLK = tx_clk (156.25MHz) — MM2S异域，自动插CDC
 #   S02_ACLK = rx_clk (156.25MHz) — S2MM异域，自动插CDC
-#   M00_ACLK = pl_clk1 (375MHz) — HP0同域，无需CDC
+#   M00_ACLK = pl_clk1 (300MHz) — HP0同域，无需CDC
 set axi_intc_dma [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 axi_intc_dma ]
 set_property -dict [list CONFIG.NUM_SI {3} CONFIG.NUM_MI {1} CONFIG.SYNCHRONIZATION_STAGES {2}] $axi_intc_dma
 
@@ -109,7 +107,7 @@ connect_bd_intf_net [get_bd_intf_pins axi_dma_0/M_AXI_S2MM]  [get_bd_intf_pins a
 connect_bd_intf_net [get_bd_intf_pins axi_intc_dma/M00_AXI]  [get_bd_intf_pins zynq_ultra_ps_e_0/S_AXI_HP0_FPD]
 
 # AXI Interconnect 时钟连接
-# ACLK/M00_ACLK 改用 pl_clk1(375MHz) 作为交叉开关与 HP0 端口时钟，避免 100MHz 节流
+# ACLK/M00_ACLK 改用 pl_clk1(300MHz) 作为交叉开关与 HP0 端口时钟，避免 100MHz 节流
 # S01/S02 仍为 tx_clk/rx_clk(156.25MHz)，Interconnect 自动插入异步 CDC
 connect_bd_net $pl_clk1 [get_bd_pins axi_intc_dma/ACLK]
 connect_bd_net $pl_clk  [get_bd_pins axi_intc_dma/S00_ACLK]
@@ -117,7 +115,8 @@ connect_bd_net $tx_clk  [get_bd_pins axi_intc_dma/S01_ACLK]
 connect_bd_net $rx_clk  [get_bd_pins axi_intc_dma/S02_ACLK]
 connect_bd_net $pl_clk1 [get_bd_pins axi_intc_dma/M00_ACLK]
 
-# HP0 端口时钟改用 pl_clk1(375MHz)，充分发挥 128bit HP0 带宽
+# HP0 端口时钟用 pl_clk1(300MHz)：SAXIGP2 最小周期 3.0ns(上限333MHz)，375MHz 会违例；
+# 300MHz 下 128bit HP0 带宽 4.8GB/s，仍远超 10G 线速需求
 connect_bd_net [get_bd_pins zynq_ultra_ps_e_0/saxihp0_fpd_aclk] $pl_clk1
 
 # 8b. user_reset 反相（官方参考设计：用XXV复位复位外部FIFO和互联）
@@ -131,15 +130,15 @@ set_property CONFIG.C_OPERATION {not} [get_bd_cells rx_rst_n]
 connect_bd_net [get_bd_pins xxv_ethernet_0/user_rx_reset_0] [get_bd_pins rx_rst_n/Op1]
 
 # 复位连接：异步端口使用DMA自身的复位输出（同步到对应时钟域）
-# ARESETN/M00_ARESETN 现属 pl_clk1(375MHz) 域，用专用 proc_sys_reset 同步复位
-create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 rst_ps8_1_375M
-connect_bd_net $pl_clk1 [get_bd_pins rst_ps8_1_375M/slowest_sync_clk]
-connect_bd_net [get_bd_pins zynq_ultra_ps_e_0/pl_resetn0] [get_bd_pins rst_ps8_1_375M/ext_reset_in]
-connect_bd_net [get_bd_pins rst_ps8_1_375M/peripheral_aresetn] [get_bd_pins axi_intc_dma/ARESETN]
+# ARESETN/M00_ARESETN 现属 pl_clk1(300MHz) 域，用专用 proc_sys_reset 同步复位
+create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 rst_ps8_1_300M
+connect_bd_net $pl_clk1 [get_bd_pins rst_ps8_1_300M/slowest_sync_clk]
+connect_bd_net [get_bd_pins zynq_ultra_ps_e_0/pl_resetn0] [get_bd_pins rst_ps8_1_300M/ext_reset_in]
+connect_bd_net [get_bd_pins rst_ps8_1_300M/peripheral_aresetn] [get_bd_pins axi_intc_dma/ARESETN]
 connect_bd_net [get_bd_pins rst_ps8_0_96M/peripheral_aresetn] [get_bd_pins axi_intc_dma/S00_ARESETN]
 connect_bd_net [get_bd_pins tx_rst_n/Res] [get_bd_pins axi_intc_dma/S01_ARESETN]
 connect_bd_net [get_bd_pins rx_rst_n/Res] [get_bd_pins axi_intc_dma/S02_ARESETN]
-connect_bd_net [get_bd_pins rst_ps8_1_375M/peripheral_aresetn] [get_bd_pins axi_intc_dma/M00_ARESETN]
+connect_bd_net [get_bd_pins rst_ps8_1_300M/peripheral_aresetn] [get_bd_pins axi_intc_dma/M00_ARESETN]
 
 # 9. AXIS Data FIFO（官方参考设计标配，增加抖动容限）
 create_bd_cell -type ip -vlnv xilinx.com:ip:axis_data_fifo:2.0 axis_data_fifo_tx
@@ -175,6 +174,15 @@ for {set i 1} {$i <= 4} {incr i} {
 # XXV MAC不使用RX_LOS，仅留作监测
 set sfp1_loss [ create_bd_port -dir I sfp1_loss ]
 
+# 12b. PL LED GPIO（2bit 全输出，D16/C16；挂 HPM0_LPD，供 R5 直接控制）
+set axi_gpio_led [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_gpio:2.0 axi_gpio_led ]
+set_property -dict [list CONFIG.C_GPIO_WIDTH {2} CONFIG.C_ALL_OUTPUTS {1}] $axi_gpio_led
+make_bd_intf_pins_external [get_bd_intf_pins axi_gpio_led/GPIO]
+set pl_led_port [get_bd_intf_ports -of_objects [get_bd_intf_nets -of_objects [get_bd_intf_pins axi_gpio_led/GPIO]]]
+set_property name PL_LED $pl_led_port
+apply_bd_automation -rule xilinx.com:bd_rule:axi4 -config { Clk_master {Auto} Clk_slave {Auto} Clk_xbar {Auto} Master {/zynq_ultra_ps_e_0/M_AXI_HPM0_LPD} Slave {/axi_gpio_led/S_AXI} ddr_seg {Auto} intc_ip {Auto} master_apm {0}}  [get_bd_intf_pins axi_gpio_led/S_AXI]
+
 # 13. 校验与地址分配
 assign_bd_address
+assign_bd_address -offset 0x80060000 -range 0x00010000 -target_address_space [get_bd_addr_spaces zynq_ultra_ps_e_0/Data] [get_bd_addr_segs axi_gpio_led/S_AXI/Reg] -force
 validate_bd_design -force

@@ -127,7 +127,6 @@ xilinx.com:ip:xlconstant:1.1\
 xilinx.com:ip:axi_gpio:2.0\
 xilinx.com:ip:axi_uart16550:2.0\
 xilinx.com:ip:ddr4:2.2\
-xilinx.com:ip:gmii_to_rgmii:4.1\
 xilinx.com:ip:proc_sys_reset:5.0\
 xilinx.com:ip:xlconcat:2.1\
 xilinx.com:ip:zynq_ultra_ps_e:3.4\
@@ -209,10 +208,6 @@ proc create_root_design { parentCell } {
 
   set IIC_0_0 [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:iic_rtl:1.0 IIC_0_0 ]
 
-  set MDIO_ENET0_0 [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:mdio_rtl:1.0 MDIO_ENET0_0 ]
-
-  set RGMII_0 [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:rgmii_rtl:1.0 RGMII_0 ]
-
   set UART_1_0 [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:uart_rtl:1.0 UART_1_0 ]
 
   set ddr4_rtl_0 [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:ddr4_rtl:1.0 ddr4_rtl_0 ]
@@ -269,14 +264,6 @@ proc create_root_design { parentCell } {
     CONFIG.C0.DDR4_MemoryPart {MT40A512M16HA-083E} \
     CONFIG.C0.DDR4_TimePeriod {833} \
   ] $ddr4_0
-
-
-  # Create instance: gmii_to_rgmii_0, and set properties
-  set gmii_to_rgmii_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:gmii_to_rgmii:4.1 gmii_to_rgmii_0 ]
-  set_property -dict [list \
-    CONFIG.RGMII_TXC_SKEW {1} \
-    CONFIG.SupportLevel {Include_Shared_Logic_in_Core} \
-  ] $gmii_to_rgmii_0
 
 
   # Create instance: proc_sys_reset_0, and set properties
@@ -784,8 +771,8 @@ MIO#GPIO1 MIO#UART 0#UART 0#USB0 Reset#SD 1#SD 1#SD 1#SD 1#SD 1#SD 1#SD 1#USB 0#
     CONFIG.PSU__CRL_APB__PL0_REF_CTRL__ACT_FREQMHZ {99.999001} \
     CONFIG.PSU__CRL_APB__PL0_REF_CTRL__FREQMHZ {100} \
     CONFIG.PSU__CRL_APB__PL0_REF_CTRL__SRCSEL {IOPLL} \
-    CONFIG.PSU__CRL_APB__PL1_REF_CTRL__ACT_FREQMHZ {374.996246} \
-    CONFIG.PSU__CRL_APB__PL1_REF_CTRL__FREQMHZ {375} \
+    CONFIG.PSU__CRL_APB__PL1_REF_CTRL__ACT_FREQMHZ {299.997003} \
+    CONFIG.PSU__CRL_APB__PL1_REF_CTRL__FREQMHZ {300} \
     CONFIG.PSU__CRL_APB__PL1_REF_CTRL__SRCSEL {IOPLL} \
     CONFIG.PSU__CRL_APB__PL2_REF_CTRL__ACT_FREQMHZ {100} \
     CONFIG.PSU__CRL_APB__PL3_REF_CTRL__ACT_FREQMHZ {100} \
@@ -915,9 +902,9 @@ MIO#GPIO1 MIO#UART 0#UART 0#USB0 Reset#SD 1#SD 1#SD 1#SD 1#SD 1#SD 1#SD 1#USB 0#
     CONFIG.PSU__DP__REF_CLK_SEL {Ref Clk2} \
     CONFIG.PSU__ENABLE__DDR__REFRESH__SIGNALS {0} \
     CONFIG.PSU__ENET0__FIFO__ENABLE {0} \
-    CONFIG.PSU__ENET0__GRP_MDIO__ENABLE {1} \
+    CONFIG.PSU__ENET0__GRP_MDIO__ENABLE {0} \
     CONFIG.PSU__ENET0__GRP_MDIO__IO {EMIO} \
-    CONFIG.PSU__ENET0__PERIPHERAL__ENABLE {1} \
+    CONFIG.PSU__ENET0__PERIPHERAL__ENABLE {0} \
     CONFIG.PSU__ENET0__PERIPHERAL__IO {EMIO} \
     CONFIG.PSU__ENET0__PTP__ENABLE {0} \
     CONFIG.PSU__ENET1__PERIPHERAL__ENABLE {0} \
@@ -1355,16 +1342,12 @@ Port;FD4A0000;FD4AFFFF;1|FPD;DPDMA;FD4C0000;FD4CFFFF;1|FPD;DDR_XMPU5_CFG;FD05000
   connect_bd_intf_net -intf_net axi_gpio_1_GPIO [get_bd_intf_ports GPIO_1] [get_bd_intf_pins axi_gpio_1/GPIO]
   connect_bd_intf_net -intf_net axi_interconnect_0_M00_AXI [get_bd_intf_pins axi_interconnect_0/M00_AXI] [get_bd_intf_pins ddr4_0/C0_DDR4_S_AXI]
   connect_bd_intf_net -intf_net ddr4_0_C0_DDR4 [get_bd_intf_ports ddr4_rtl_0] [get_bd_intf_pins ddr4_0/C0_DDR4]
-  connect_bd_intf_net -intf_net gmii_to_rgmii_0_MDIO_PHY [get_bd_intf_ports MDIO_ENET0_0] [get_bd_intf_pins gmii_to_rgmii_0/MDIO_PHY]
-  connect_bd_intf_net -intf_net gmii_to_rgmii_0_RGMII [get_bd_intf_ports RGMII_0] [get_bd_intf_pins gmii_to_rgmii_0/RGMII]
   connect_bd_intf_net -intf_net ps8_0_axi_periph_M00_AXI [get_bd_intf_pins axi_gpio_0/S_AXI] [get_bd_intf_pins ps8_0_axi_periph/M00_AXI]
   connect_bd_intf_net -intf_net ps8_0_axi_periph_M01_AXI [get_bd_intf_pins axi_gpio_1/S_AXI] [get_bd_intf_pins ps8_0_axi_periph/M01_AXI]
   connect_bd_intf_net -intf_net ps8_0_axi_periph_M02_AXI [get_bd_intf_pins axi_uart16550_0/S_AXI] [get_bd_intf_pins ps8_0_axi_periph/M02_AXI]
   connect_bd_intf_net -intf_net ps8_0_axi_periph_M03_AXI [get_bd_intf_pins axi_uart16550_1/S_AXI] [get_bd_intf_pins ps8_0_axi_periph/M03_AXI]
-  connect_bd_intf_net -intf_net zynq_ultra_ps_e_0_GMII_ENET0 [get_bd_intf_pins gmii_to_rgmii_0/GMII] [get_bd_intf_pins zynq_ultra_ps_e_0/GMII_ENET0]
   connect_bd_intf_net -intf_net zynq_ultra_ps_e_0_GPIO_0 [get_bd_intf_ports EMIO] [get_bd_intf_pins zynq_ultra_ps_e_0/GPIO_0]
   connect_bd_intf_net -intf_net zynq_ultra_ps_e_0_IIC_0 [get_bd_intf_ports IIC_0_0] [get_bd_intf_pins zynq_ultra_ps_e_0/IIC_0]
-  connect_bd_intf_net -intf_net zynq_ultra_ps_e_0_MDIO_ENET0 [get_bd_intf_pins gmii_to_rgmii_0/MDIO_GEM] [get_bd_intf_pins zynq_ultra_ps_e_0/MDIO_ENET0]
   connect_bd_intf_net -intf_net zynq_ultra_ps_e_0_M_AXI_HPM0_FPD [get_bd_intf_pins axi_interconnect_0/S00_AXI] [get_bd_intf_pins zynq_ultra_ps_e_0/M_AXI_HPM0_FPD]
   connect_bd_intf_net -intf_net zynq_ultra_ps_e_0_M_AXI_HPM0_LPD [get_bd_intf_pins ps8_0_axi_periph/S00_AXI] [get_bd_intf_pins zynq_ultra_ps_e_0/M_AXI_HPM0_LPD]
   connect_bd_intf_net -intf_net zynq_ultra_ps_e_0_UART_1 [get_bd_intf_ports UART_1_0] [get_bd_intf_pins zynq_ultra_ps_e_0/UART_1]
@@ -1385,7 +1368,6 @@ Port;FD4A0000;FD4AFFFF;1|FPD;DPDMA;FD4C0000;FD4CFFFF;1|FPD;DDR_XMPU5_CFG;FD05000
   connect_bd_net -net sin_1_1 [get_bd_ports sin_1] [get_bd_pins axi_uart16550_1/sin]
   connect_bd_net -net xlconcat_0_dout [get_bd_pins xlconcat_0/dout] [get_bd_pins zynq_ultra_ps_e_0/pl_ps_irq0]
   connect_bd_net -net zynq_ultra_ps_e_0_pl_clk0 [get_bd_pins axi_gpio_0/s_axi_aclk] [get_bd_pins axi_gpio_1/s_axi_aclk] [get_bd_pins axi_uart16550_0/s_axi_aclk] [get_bd_pins axi_uart16550_1/s_axi_aclk] [get_bd_pins ps8_0_axi_periph/ACLK] [get_bd_pins ps8_0_axi_periph/M00_ACLK] [get_bd_pins ps8_0_axi_periph/M01_ACLK] [get_bd_pins ps8_0_axi_periph/M02_ACLK] [get_bd_pins ps8_0_axi_periph/M03_ACLK] [get_bd_pins ps8_0_axi_periph/S00_ACLK] [get_bd_pins rst_ps8_0_96M/slowest_sync_clk] [get_bd_pins zynq_ultra_ps_e_0/maxihpm0_lpd_aclk] [get_bd_pins zynq_ultra_ps_e_0/pl_clk0]
-  connect_bd_net -net zynq_ultra_ps_e_0_pl_clk1 [get_bd_pins gmii_to_rgmii_0/clkin] [get_bd_pins zynq_ultra_ps_e_0/pl_clk1]
   connect_bd_net -net zynq_ultra_ps_e_0_pl_resetn0 [get_bd_pins rst_ps8_0_96M/ext_reset_in] [get_bd_pins zynq_ultra_ps_e_0/pl_resetn0]
 
   # Create address segments
