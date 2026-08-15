@@ -331,7 +331,7 @@ set_property PACKAGE_PIN C22 [get_ports {GPIO_0_tri_io[31]}]
 set_property PACKAGE_PIN D14 [get_ports {GPIO_1_tri_io[0]}]
 set_property PACKAGE_PIN E12 [get_ports {GPIO_1_tri_io[1]}]
 #clk_out1_IMAGE_15EG_clk_wiz_0_0
-set_false_path -from [get_clocks clk_pl_1] -to [get_clocks mdio0_mdc_clock]
+# (旧 gem0 的 mdio0_mdc_clock false_path 已删除：该时钟随 gem0 移除不再存在)
 
 #set_property IOSTANDARD LVDS [get_ports CLK_IN1_D_0_clk_p]
 #set_property DIFF_TERM_ADV TERM_100 [get_ports CLK_IN1_D_0_clk_p]
@@ -343,10 +343,7 @@ set_property IOSTANDARD LVCMOS33 [get_ports {GPIO2_0_tri_io[0]}]
 set_property PACKAGE_PIN A22 [get_ports {GPIO2_0_tri_io[1]}]
 set_property PACKAGE_PIN A21 [get_ports {GPIO2_0_tri_io[0]}]
 
-set_property C_CLK_INPUT_FREQ_HZ 300000000 [get_debug_cores dbg_hub]
-set_property C_ENABLE_CLK_DIVIDER false [get_debug_cores dbg_hub]
-set_property C_USER_SCAN_CHAIN 1 [get_debug_cores dbg_hub]
-connect_debug_port dbg_hub/clk [get_nets clk]
+# (debug hub 约束已删除：TCL 流程无 ILA/VIO，原约束只会生成空的 dbg_hub)
 
 # ----------------------------------------------------------------------------------
 # 10G SFP1 Transceiver Constraints (Bank 129)

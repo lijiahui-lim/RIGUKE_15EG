@@ -8,5 +8,5 @@ podman run -it --rm \
   -p 69:69/udp \
   -v $(pwd):/workspace \
   -w /workspace \
-  localhost/ubuntu_petalinux_rk3588:v3
+  localhost/ubuntu_petalinux_rk3588:v3 \
   /bin/bash
