@@ -18,8 +18,13 @@ IMAGE_15EG_TCL/
 .hw/
 .sim/
 .str/
-
+.qoder/
 # Operating system files
 .DS_Store
 Thumbs.db
 petalinux_prj/
+
+# R5 firmware build artifacts
+r5_fw/ws/
+r5_fw/glibc_shim.so
+r5_fw/r5_led.elf
