@@ -28,3 +28,15 @@ petalinux_prj/
 r5_fw/ws/
 r5_fw/glibc_shim.so
 r5_fw/r5_led.elf
+
+#Pluto Fw files
+plutosdr-fw/
+
+# Board vendor reference project (not tracked)
+rk-fmc-ad9361/
+
+# Large source assets (local only, >100MB not pushable)
+kernel/linux-adi-5.15-plutosdr-fw.tar.gz
+
+# Board debug tooling (local only)
+jtag/

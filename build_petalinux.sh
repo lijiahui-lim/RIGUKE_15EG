@@ -62,6 +62,25 @@ cp "$SCRIPT_DIR/dts/u-boot-bsp.cfg" \
 cp "$SCRIPT_DIR/dts/system-user.dtsi" \
    "$SCRIPT_DIR/$PROJECT_NAME/components/plnx_workspace/device-tree/device-tree/system-user.dtsi"
 
+# AD9361：内核切换为 ADI 内核（kernel/linux-adi-5.15-plutosdr-fw.tar.gz，
+# 与 plutosdr-fw/linux 一致的快照）+ bbappend + bsp.cfg 同步进 meta-user
+echo "Syncing ADI kernel source into project-spec..."
+KDIR="$SCRIPT_DIR/$PROJECT_NAME/project-spec/meta-user/recipes-kernel/linux"
+mkdir -p "$KDIR/linux-xlnx"
+cp "$SCRIPT_DIR/kernel/linux-adi-5.15-plutosdr-fw.tar.gz" "$KDIR/linux-xlnx/"
+cp "$SCRIPT_DIR/kernel/linux-xlnx_%.bbappend" "$KDIR/"
+cp "$SCRIPT_DIR/kernel/bsp.cfg" "$KDIR/linux-xlnx/"
+rm -rf "$KDIR/linux-xlnx/adi-drivers"
+
+# 内核源切换后清理 work-shared 里的旧内核树（否则 kernel_checkout
+# 会在残留的旧 git 状态上报 "not a git repository"）：
+# linux-xlnx 5.15.36 的 Makefile 有 SUBLEVEL = 36，ADI 快照是 SUBLEVEL = 0
+KERN_SRC="$SCRIPT_DIR/$PROJECT_NAME/build/tmp/work-shared/zynqmp-generic/kernel-source"
+if [ -d "$KERN_SRC" ] && { grep -q "^SUBLEVEL = 36" "$KERN_SRC/Makefile" 2>/dev/null || [ -f "$KERN_SRC/.git" ]; }; then
+    echo "Removing stale work-shared kernel source..."
+    rm -rf "$KERN_SRC"
+fi
+
 # R5 固件打包：r5_fw/r5_led.elf → rootfs 的 /lib/firmware/
 # （remoteproc 加载用；recipe 由本脚本生成，ELF 来自 r5_fw/）
 FW_DIR="$SCRIPT_DIR/$PROJECT_NAME/project-spec/meta-user/recipes-apps/r5-firmware"
@@ -109,6 +128,22 @@ petalinux-config -c rootfs --silentconfig
 if [ -f "$FW_DIR/r5-firmware.bb" ] && ! grep -q "^CONFIG_r5-firmware=y" "$ROOTFS_CFG"; then
     echo "CONFIG_r5-firmware=y" >> "$ROOTFS_CFG"
     echo "Enabled CONFIG_r5-firmware in rootfs"
+fi
+
+# AD9361 应用层：libiio（含 iiod 与 iio_info/iio_readdev/iio_writedev 工具）
+echo "Syncing libiio recipe into project-spec..."
+LIBIIO_DIR="$SCRIPT_DIR/$PROJECT_NAME/project-spec/meta-user/recipes-iio/libiio"
+mkdir -p "$LIBIIO_DIR/files"
+cp "$SCRIPT_DIR/apps/libiio/libiio_0.25.bb" "$LIBIIO_DIR/"
+cp "$SCRIPT_DIR/apps/libiio/files/libiio-0.25.tar.gz" "$LIBIIO_DIR/files/"
+cp "$SCRIPT_DIR/apps/libiio/files/S99iiod" "$LIBIIO_DIR/files/"
+USER_ROOTFS_CFG="$SCRIPT_DIR/$PROJECT_NAME/project-spec/meta-user/conf/user-rootfsconfig"
+if ! grep -q "^CONFIG_libiio$" "$USER_ROOTFS_CFG"; then
+    echo "CONFIG_libiio" >> "$USER_ROOTFS_CFG"
+fi
+if ! grep -q "^CONFIG_libiio=y" "$ROOTFS_CFG"; then
+    echo "CONFIG_libiio=y" >> "$ROOTFS_CFG"
+    echo "Enabled CONFIG_libiio in rootfs"
 fi
 
 # ==========================================

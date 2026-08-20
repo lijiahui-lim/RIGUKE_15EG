@@ -182,7 +182,9 @@ set pl_led_port [get_bd_intf_ports -of_objects [get_bd_intf_nets -of_objects [ge
 set_property name PL_LED $pl_led_port
 apply_bd_automation -rule xilinx.com:bd_rule:axi4 -config { Clk_master {Auto} Clk_slave {Auto} Clk_xbar {Auto} Master {/zynq_ultra_ps_e_0/M_AXI_HPM0_LPD} Slave {/axi_gpio_led/S_AXI} ddr_seg {Auto} intc_ip {Auto} master_apm {0}}  [get_bd_intf_pins axi_gpio_led/S_AXI]
 
-# 13. 校验与地址分配
+# 13. 地址分配
 assign_bd_address
 assign_bd_address -offset 0x80060000 -range 0x00010000 -target_address_space [get_bd_addr_spaces zynq_ultra_ps_e_0/Data] [get_bd_addr_segs axi_gpio_led/S_AXI/Reg] -force
-validate_bd_design -force
+
+# 14. AD9361 (AD-FMCOMMS3) 子系统注入（validate_bd_design 在其末尾执行）
+source ${script_dir}/02b_ad9361.tcl
