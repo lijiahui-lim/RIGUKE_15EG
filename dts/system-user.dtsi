@@ -98,9 +98,9 @@
 		#size-cells = <0x2>;
 		ranges;
 
-		rx_dma: dma@b0010000 {
+		rx_dma: dma@80110000 {
 			compatible = "adi,axi-dmac-1.00.a";
-			reg = <0x0 0xb0010000 0x0 0x10000>;
+			reg = <0x0 0x80110000 0x0 0x10000>;
 			#dma-cells = <1>;
 			#clock-cells = <0>;
 			/* xlconcat_0 In4 -> pl_ps_irq0[4] = GIC SPI 93 */
@@ -121,9 +121,9 @@
 			};
 		};
 
-		tx_dma: dma@b0020000 {
+		tx_dma: dma@80120000 {
 			compatible = "adi,axi-dmac-1.00.a";
-			reg = <0x0 0xb0020000 0x0 0x10000>;
+			reg = <0x0 0x80120000 0x0 0x10000>;
 			#dma-cells = <1>;
 			#clock-cells = <0>;
 			/* xlconcat_0 In5 -> pl_ps_irq0[5] = GIC SPI 94 */
@@ -144,17 +144,17 @@
 			};
 		};
 
-		cf_ad9361_adc_core_0: cf-ad9361-lpc@b0000000 {
+		cf_ad9361_adc_core_0: cf-ad9361-lpc@80100000 {
 			compatible = "adi,axi-ad9361-6.00.a";
-			reg = <0x0 0xb0000000 0x0 0x6000>;
+			reg = <0x0 0x80100000 0x0 0x6000>;
 			dmas = <&rx_dma 0>;
 			dma-names = "rx";
 			spibus-connected = <&adc0_ad9361>;
 		};
 
-		cf_ad9361_dac_core_0: cf-ad9361-dds-core-lpc@b0004000 {
+		cf_ad9361_dac_core_0: cf-ad9361-dds-core-lpc@80104000 {
 			compatible = "adi,axi-ad9361-dds-6.00.a";
-			reg = <0x0 0xb0004000 0x0 0x1000>;
+			reg = <0x0 0x80104000 0x0 0x1000>;
 			clocks = <&adc0_ad9361 13>;
 			clock-names = "sampl_clk";
 			dmas = <&tx_dma 0>;

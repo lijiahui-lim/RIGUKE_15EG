@@ -220,30 +220,22 @@ foreach ch {i0 q0 i1 q1} idx {0 1 2 3} {
 connect_bd_net [get_bd_pins axi_ad9361_dac_fifo/dout_unf] [get_bd_pins axi_ad9361/dac_dunf]
 
 # ----------------------------------------------------------------------------------
-# 7. Register interconnect: PS M_AXI_HPM1_FPD -> 独立 interconnect -> 3 个从设备
-#    (不动现有 ps8_0_axi_periph：其 NUM_MI 变更需要 IP 再生，脚本化不可靠)
+# 7. Register interconnect: 复用现有 ps8_0_axi_periph (PS M_AXI_HPM0_LPD)
+#    教训：M_AXI_HPM1_FPD 无论经 axi_interconnect 还是 SmartConnect，都会把地址
+#    低位 [3:2] 强制为 0（只有 8 字节对齐的寄存器可读，RATE@0x54 恒 0，导致
+#    cf_axi_adc dig_tune 失败）。厂商参考设计寄存器总线走 M_AXI_HPM0_LPD
+#    （原生 32 位，已验证可用），故把 3 个从设备挂到现有 LPD periph 上。
+#    ps8_0_axi_periph 已用 M00-M06（gpio x2/uart x2/axi_dma/xxv/gpio_led），扩到 10 个。
 # ----------------------------------------------------------------------------------
-set_property -dict [list \
-  CONFIG.PSU__USE__M_AXI_GP1 {1} \
-  CONFIG.PSU__MAXIGP1__DATA_WIDTH {32} \
-] $ps
-set ad9361_periph [create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 axi_periph_ad9361]
-set_property CONFIG.NUM_MI {3} $ad9361_periph
-connect_bd_intf_net [get_bd_intf_pins zynq_ultra_ps_e_0/M_AXI_HPM1_FPD] [get_bd_intf_pins axi_periph_ad9361/S00_AXI]
-connect_bd_net $pl_clk [get_bd_pins zynq_ultra_ps_e_0/maxihpm1_fpd_aclk]
-connect_bd_net $pl_clk [get_bd_pins axi_periph_ad9361/ACLK]
-connect_bd_net $pl_clk [get_bd_pins axi_periph_ad9361/S00_ACLK]
-connect_bd_net $pl_clk [get_bd_pins axi_periph_ad9361/M00_ACLK]
-connect_bd_net $pl_clk [get_bd_pins axi_periph_ad9361/M01_ACLK]
-connect_bd_net $pl_clk [get_bd_pins axi_periph_ad9361/M02_ACLK]
-connect_bd_net $rst_100m [get_bd_pins axi_periph_ad9361/ARESETN]
-connect_bd_net $rst_100m [get_bd_pins axi_periph_ad9361/S00_ARESETN]
-connect_bd_net $rst_100m [get_bd_pins axi_periph_ad9361/M00_ARESETN]
-connect_bd_net $rst_100m [get_bd_pins axi_periph_ad9361/M01_ARESETN]
-connect_bd_net $rst_100m [get_bd_pins axi_periph_ad9361/M02_ARESETN]
-connect_bd_intf_net [get_bd_intf_pins axi_periph_ad9361/M00_AXI] [get_bd_intf_pins axi_ad9361/s_axi]
-connect_bd_intf_net [get_bd_intf_pins axi_periph_ad9361/M01_AXI] [get_bd_intf_pins axi_ad9361_adc_dma/s_axi]
-connect_bd_intf_net [get_bd_intf_pins axi_periph_ad9361/M02_AXI] [get_bd_intf_pins axi_ad9361_dac_dma/s_axi]
+set_property CONFIG.NUM_MI {10} [get_bd_cells ps8_0_axi_periph]
+connect_bd_intf_net [get_bd_intf_pins ps8_0_axi_periph/M07_AXI] [get_bd_intf_pins axi_ad9361/s_axi]
+connect_bd_intf_net [get_bd_intf_pins ps8_0_axi_periph/M08_AXI] [get_bd_intf_pins axi_ad9361_adc_dma/s_axi]
+connect_bd_intf_net [get_bd_intf_pins ps8_0_axi_periph/M09_AXI] [get_bd_intf_pins axi_ad9361_dac_dma/s_axi]
+# 手动扩出的 M07-M09 端口时钟/复位（与现有 M00-M06 同一 100MHz 域）
+foreach mi {M07 M08 M09} {
+  connect_bd_net $pl_clk   [get_bd_pins ps8_0_axi_periph/${mi}_ACLK]
+  connect_bd_net $rst_100m [get_bd_pins ps8_0_axi_periph/${mi}_ARESETN]
+}
 
 # ----------------------------------------------------------------------------------
 # 8. DMA -> DDR: HP1 (ADC), HP2 (DAC) via smartconnect
@@ -289,9 +281,11 @@ connect_bd_net [get_bd_pins axi_ad9361_dac_dma/irq] [get_bd_pins xlconcat_0/In5]
 # 11. Address assignment (avoid existing 0x8000_0000..0x8006_xxxx range)
 # ----------------------------------------------------------------------------------
 assign_bd_address
-assign_bd_address -offset 0xB0000000 -range 0x00010000 -target_address_space [get_bd_addr_spaces zynq_ultra_ps_e_0/Data] [get_bd_addr_segs axi_ad9361/s_axi/axi_lite] -force
-assign_bd_address -offset 0xB0010000 -range 0x00010000 -target_address_space [get_bd_addr_spaces zynq_ultra_ps_e_0/Data] [get_bd_addr_segs axi_ad9361_adc_dma/s_axi/axi_lite] -force
-assign_bd_address -offset 0xB0020000 -range 0x00010000 -target_address_space [get_bd_addr_spaces zynq_ultra_ps_e_0/Data] [get_bd_addr_segs axi_ad9361_dac_dma/s_axi/axi_lite] -force
+# M_AXI_HPM0_LPD 只输出地址低 26 位，可用孔径 0x8000_0000~0x83FF_FFFF，
+# 原 0xB000_xxxx 不在窗口内（BD 41-1075），故改用窗口内空闲区 0x801x_xxxx
+assign_bd_address -offset 0x80100000 -range 0x00010000 -target_address_space [get_bd_addr_spaces zynq_ultra_ps_e_0/Data] [get_bd_addr_segs axi_ad9361/s_axi/axi_lite] -force
+assign_bd_address -offset 0x80110000 -range 0x00010000 -target_address_space [get_bd_addr_spaces zynq_ultra_ps_e_0/Data] [get_bd_addr_segs axi_ad9361_adc_dma/s_axi/axi_lite] -force
+assign_bd_address -offset 0x80120000 -range 0x00010000 -target_address_space [get_bd_addr_spaces zynq_ultra_ps_e_0/Data] [get_bd_addr_segs axi_ad9361_dac_dma/s_axi/axi_lite] -force
 
 validate_bd_design -force
 puts "==== AD9361 SUBSYSTEM INJECTION DONE ===="
