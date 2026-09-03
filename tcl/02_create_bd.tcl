@@ -187,7 +187,16 @@ assign_bd_address
 assign_bd_address -offset 0x80060000 -range 0x00010000 -target_address_space [get_bd_addr_spaces zynq_ultra_ps_e_0/Data] [get_bd_addr_segs axi_gpio_led/S_AXI/Reg] -force
 
 # 14. AD9361 (AD-FMCOMMS3) 子系统注入（validate_bd_design 在其末尾执行）
-source ${script_dir}/02b_ad9361.tcl
-
 # 15. MIPI CSI-2 (OV5647) 子系统注入（validate_bd_design 在其末尾执行）
-source ${script_dir}/02c_mipi_csi.tcl
+# 开关在 01_create_project.tcl 中由环境变量 ENABLE_AD9361 / ENABLE_MIPI 决定（bank67 互斥）
+if {!$ENABLE_AD9361} {
+  # 无 AD9361 时 EMIO 只用到 [0..15]（CAM1_CLK/GPIO、哑元占位），基础设计的 88 宽
+  # 会留下大量无约束端口导致 IO placement 失败；02b 启用时自行设为 35
+  set_property CONFIG.PSU__GPIO_EMIO_WIDTH {16} [get_bd_cells zynq_ultra_ps_e_0]
+}
+if {$ENABLE_AD9361} {
+  source ${script_dir}/02b_ad9361.tcl
+}
+if {$ENABLE_MIPI} {
+  source ${script_dir}/02c_mipi_csi.tcl
+}

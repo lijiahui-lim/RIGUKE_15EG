@@ -115,52 +115,10 @@ set_property IOSTANDARD LVCMOS33 [get_ports {EMIO_tri_io[14]}]
 set_property IOSTANDARD LVCMOS33 [get_ports {EMIO_tri_io[15]}]
 
 # ----------------------------------------------------------------------------------
-# FMC (Bank 66/67) EMIO GPIO，宽度 35（PSU__GPIO_EMIO_WIDTH=35，见 tcl/02b_ad9361.tcl）
-# AD9361 控制线映射（Linux gpio 线号 = 78 + EMIO bit，见 dts/system-user.dtsi）：
-#   [20]=sync(U6) [21]=en_agc(V6) [22]=resetb(AB6)
-#   [23..30]=status[0..7] (V12,V11,U5,U4,W2,W1,Y10,Y9)
-#   [31..34]=ctl[0..3] (V4,V3,W7,W6)
-# FMC LVDS/SPI/enable 球已由 ad9361_fmc.xdc 分配给 PL 端口，此处不再约束。
+# FMC (Bank 66/67) AD9361 控制线 EMIO 约束（EMIO_tri_io[16..34]，LVCMOS18）
+# 已移至 src/constrs/ad9361_fmc.xdc：bank67 上 1.8V 引脚会与 MIPI D-PHY(1.2V)
+# 冲突，只能随 AD9361 子系统条件加入。
 # ----------------------------------------------------------------------------------
-set_property PACKAGE_PIN P9 [get_ports {EMIO_tri_io[16]}]
-set_property PACKAGE_PIN P10 [get_ports {EMIO_tri_io[17]}]
-set_property PACKAGE_PIN Y3 [get_ports {EMIO_tri_io[18]}]
-set_property PACKAGE_PIN Y4 [get_ports {EMIO_tri_io[19]}]
-set_property PACKAGE_PIN U6 [get_ports {EMIO_tri_io[20]}]
-set_property PACKAGE_PIN V6 [get_ports {EMIO_tri_io[21]}]
-set_property PACKAGE_PIN AB6 [get_ports {EMIO_tri_io[22]}]
-set_property PACKAGE_PIN V12 [get_ports {EMIO_tri_io[23]}]
-set_property PACKAGE_PIN V11 [get_ports {EMIO_tri_io[24]}]
-set_property PACKAGE_PIN U5 [get_ports {EMIO_tri_io[25]}]
-set_property PACKAGE_PIN U4 [get_ports {EMIO_tri_io[26]}]
-set_property PACKAGE_PIN W2 [get_ports {EMIO_tri_io[27]}]
-set_property PACKAGE_PIN W1 [get_ports {EMIO_tri_io[28]}]
-set_property PACKAGE_PIN Y10 [get_ports {EMIO_tri_io[29]}]
-set_property PACKAGE_PIN Y9 [get_ports {EMIO_tri_io[30]}]
-set_property PACKAGE_PIN V4 [get_ports {EMIO_tri_io[31]}]
-set_property PACKAGE_PIN V3 [get_ports {EMIO_tri_io[32]}]
-set_property PACKAGE_PIN W7 [get_ports {EMIO_tri_io[33]}]
-set_property PACKAGE_PIN W6 [get_ports {EMIO_tri_io[34]}]
-
-set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_tri_io[16]}]
-set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_tri_io[17]}]
-set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_tri_io[18]}]
-set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_tri_io[19]}]
-set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_tri_io[20]}]
-set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_tri_io[21]}]
-set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_tri_io[22]}]
-set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_tri_io[23]}]
-set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_tri_io[24]}]
-set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_tri_io[25]}]
-set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_tri_io[26]}]
-set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_tri_io[27]}]
-set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_tri_io[28]}]
-set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_tri_io[29]}]
-set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_tri_io[30]}]
-set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_tri_io[31]}]
-set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_tri_io[32]}]
-set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_tri_io[33]}]
-set_property IOSTANDARD LVCMOS18 [get_ports {EMIO_tri_io[34]}]
 
 
 set_property IOSTANDARD LVCMOS33 [get_ports {GPIO_0_tri_io[31]}]
@@ -238,8 +196,7 @@ set_property PACKAGE_PIN E12 [get_ports {GPIO_1_tri_io[1]}]
 #set_property DIFF_TERM_ADV TERM_100 [get_ports CLK_IN1_D_0_clk_p]
 #set_property PACKAGE_PIN P11 [get_ports CLK_IN1_D_0_clk_p]
 
-# FMC F12 (PWRGD)：PL 常量端口恒驱动为高（BD 中 pwrgd = VCC，见 tcl/02b_ad9361.tcl）
-set_property -dict {PACKAGE_PIN F12 IOSTANDARD LVCMOS33} [get_ports pwrgd]
+# FMC F12 (PWRGD) 约束已移至 src/constrs/ad9361_fmc.xdc（pwrgd 端口由 tcl/02b_ad9361.tcl 创建）。
 set_property IOSTANDARD LVCMOS33 [get_ports {GPIO2_0_tri_io[1]}]
 set_property IOSTANDARD LVCMOS33 [get_ports {GPIO2_0_tri_io[0]}]
 set_property PACKAGE_PIN A22 [get_ports {GPIO2_0_tri_io[1]}]
@@ -310,10 +267,8 @@ set_property IOSTANDARD LVCMOS33 [get_ports {EMIO_tri_io[15]}]
 #   MIPI1_CLK_P/N  = W12/W11 (B67_L1)   MIPI1_LAN0_P/N = T13/R13 (B67_L2)
 #   MIPI1_LAN1_P/N = U10/T10 (B67_L3)
 #
-# 传感器 I2C（bank 50，3.3V HR bank，板上有上拉）：
-#   CAM_SCL = J16 (B50_L12_P), CAM_SDA = J15 (B50_L12_N)
-set_property -dict {PACKAGE_PIN J16 IOSTANDARD LVCMOS33} [get_ports CAM_IIC_scl_io]
-set_property -dict {PACKAGE_PIN J15 IOSTANDARD LVCMOS33} [get_ports CAM_IIC_sda_io]
+# 传感器 I2C 约束（CAM_SCL/CAM_SDA）已移至 src/constrs/mipi_cam.xdc，
+# 仅在 ENABLE_MIPI=1 构建时加入（对应端口由 tcl/02c_mipi_csi.tcl 创建）。
 
 # CAM1_CLK(G16)/CAM1_GPIO(H16) 已被 EMIO_tri_io[8]/[9] 占用（见上文）。
 # 树莓派兼容 OV5647 模组自带晶振（xvclk 25MHz 由 DT fixed-clock 声明），

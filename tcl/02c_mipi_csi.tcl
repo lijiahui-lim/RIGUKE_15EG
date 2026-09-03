@@ -39,11 +39,9 @@ set_property -dict [list \
 connect_bd_net $pl_clk1 [get_bd_pins zynq_ultra_ps_e_0/saxihp3_fpd_aclk]
 
 # ----------------------------------------------------------------------------------
-# 2. D-PHY reference clocks (US+ XIPHY mode), two separate clk_wiz
-#    (NUM_OUT_CLKS is disabled for this clk_wiz configuration):
-#      200MHz -> dphy_clk_200M (IDELAY calibration)
-#      800MHz -> clkoutphy_in  (XiPHY CLKOUTPHY = configured line rate,
-#                               see mipi_dphy component.xml; 600MHz..4GHz)
+# 2. D-PHY reference clock: 200MHz -> dphy_clk_200M (IDELAY calibration).
+#    SupportLevel=1（与官方 demo 一致）：line-rate CLKOUTPHY 时钟由 IP 内部
+#    共享逻辑产生，无需外部 800MHz clk_wiz。
 # ----------------------------------------------------------------------------------
 set dphy_clk [create_bd_cell -type ip -vlnv xilinx.com:ip:clk_wiz:6.0 mipi_dphy_refclk]
 set_property -dict [list \
@@ -54,16 +52,6 @@ set_property -dict [list \
   CONFIG.USE_LOCKED {false} \
 ] $dphy_clk
 connect_bd_net $pl_clk [get_bd_pins $dphy_clk/clk_in1]
-
-set line_rate_clk [create_bd_cell -type ip -vlnv xilinx.com:ip:clk_wiz:6.0 mipi_line_rate_clk]
-set_property -dict [list \
-  CONFIG.PRIM_IN_FREQ {99.999001} \
-  CONFIG.PRIM_SOURCE {No_buffer} \
-  CONFIG.CLKOUT1_REQUESTED_OUT_FREQ {800.000} \
-  CONFIG.USE_RESET {false} \
-  CONFIG.USE_LOCKED {false} \
-] $line_rate_clk
-connect_bd_net $pl_clk [get_bd_pins $line_rate_clk/clk_in1]
 
 # ----------------------------------------------------------------------------------
 # 3. MIPI CSI-2 Rx Subsystem (D-PHY included, 2 lanes, RAW10)
@@ -77,6 +65,7 @@ set_property -dict [list \
   CONFIG.CLK_LANE_IO_LOC {W12} \
   CONFIG.DATA_LANE0_IO_LOC {T13} \
   CONFIG.DATA_LANE1_IO_LOC {U10} \
+  CONFIG.SupportLevel {1} \
 ] $csi
 
 connect_bd_net $pl_clk   [get_bd_pins $csi/lite_aclk]
@@ -84,9 +73,6 @@ connect_bd_net $rst_100m [get_bd_pins $csi/lite_aresetn]
 connect_bd_net $pl_clk1  [get_bd_pins $csi/video_aclk]
 connect_bd_net $rst_300m [get_bd_pins $csi/video_aresetn]
 connect_bd_net [get_bd_pins $dphy_clk/clk_out1] [get_bd_pins $csi/dphy_clk_200M]
-connect_bd_net [get_bd_pins $line_rate_clk/clk_out1] [get_bd_pins $csi/clkoutphy_in]
-# D-PHY 内部 PLL lock 指示：无外部 PLL，恒接高
-connect_bd_net [get_bd_pins VCC/dout] [get_bd_pins $csi/pll_lock_in]
 make_bd_intf_pins_external [get_bd_intf_pins $csi/mipi_phy_if]
 set mipi_port [get_bd_intf_ports -of_objects [get_bd_intf_nets -of_objects [get_bd_intf_pins $csi/mipi_phy_if]]]
 set_property name MIPI_CAM $mipi_port
@@ -161,18 +147,22 @@ connect_bd_net [get_bd_pins $rst_gpio/gpio_io_o] [get_bd_pins $rst_slice1/Din]
 connect_bd_net [get_bd_pins $rst_slice1/Dout] [get_bd_pins $fb/ap_rst_n]
 
 # ----------------------------------------------------------------------------------
-# 7. Control plane: ps8_0_axi_periph M10..M14 (扩展自 M00..M09)
+# 7. Control plane: 动态追加 5 个 master 口（不依赖 02b 是否已扩展 interconnect）
 # ----------------------------------------------------------------------------------
-set_property CONFIG.NUM_MI {15} [get_bd_cells ps8_0_axi_periph]
-connect_bd_intf_net [get_bd_intf_pins ps8_0_axi_periph/M10_AXI] [get_bd_intf_pins $csi/csirxss_s_axi]
-connect_bd_intf_net [get_bd_intf_pins ps8_0_axi_periph/M11_AXI] [get_bd_intf_pins $dm/s_axi_CTRL]
-connect_bd_intf_net [get_bd_intf_pins ps8_0_axi_periph/M12_AXI] [get_bd_intf_pins $fb/s_axi_CTRL]
-connect_bd_intf_net [get_bd_intf_pins ps8_0_axi_periph/M13_AXI] [get_bd_intf_pins $iic/S_AXI]
-connect_bd_intf_net [get_bd_intf_pins ps8_0_axi_periph/M14_AXI] [get_bd_intf_pins $rst_gpio/S_AXI]
+set periph [get_bd_cells ps8_0_axi_periph]
+set mi0 [get_property CONFIG.NUM_MI $periph]
+set_property CONFIG.NUM_MI [expr {$mi0 + 5}] $periph
 # 控制口时钟域：csi/iic/rst_gpio=100MHz；demosaic/frmbuf 与其 ap_clk(300MHz) 同域
-foreach {mi clk rst} [list M10 $pl_clk $rst_100m  M11 $pl_clk1 $rst_300m  M12 $pl_clk1 $rst_300m  M13 $pl_clk $rst_100m  M14 $pl_clk $rst_100m] {
-  connect_bd_net $clk [get_bd_pins ps8_0_axi_periph/${mi}_ACLK]
-  connect_bd_net $rst [get_bd_pins ps8_0_axi_periph/${mi}_ARESETN]
+foreach {idx cell clk rst} [list \
+  0 $csi/csirxss_s_axi $pl_clk  $rst_100m \
+  1 $dm/s_axi_CTRL     $pl_clk1 $rst_300m \
+  2 $fb/s_axi_CTRL     $pl_clk1 $rst_300m \
+  3 $iic/S_AXI         $pl_clk  $rst_100m \
+  4 $rst_gpio/S_AXI    $pl_clk  $rst_100m] {
+  set mi [format "M%02d" [expr {$mi0 + $idx}]]
+  connect_bd_intf_net [get_bd_intf_pins $periph/${mi}_AXI] [get_bd_intf_pins $cell]
+  connect_bd_net $clk [get_bd_pins $periph/${mi}_ACLK]
+  connect_bd_net $rst [get_bd_pins $periph/${mi}_ARESETN]
 }
 
 # ----------------------------------------------------------------------------------
