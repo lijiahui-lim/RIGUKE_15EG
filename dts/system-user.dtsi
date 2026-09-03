@@ -90,6 +90,34 @@
 		#clock-cells = <0>;
 	};
 
+	/* OV5647 XVCLK 25MHz：树莓派兼容模组自带晶振，驱动只读频率做 PLL 计算
+	 * (ov5647.c 要求严格 25MHz)，不驱动引脚 */
+	cam_xvclk: cam-xvclk {
+		compatible = "fixed-clock";
+		clock-frequency = <25000000>;
+		#clock-cells = <0>;
+	};
+
+	/* MIPI V4L2 采集管线容器（xlnx,video）：frmbuf DMA 通道 + media graph 根 */
+	vcap_mipi: vcap-mipi {
+		compatible = "xlnx,video";
+		dmas = <&mipi_frmbuf_wr 0>;
+		dma-names = "port0";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				direction = "input";
+				vcap_mipi_in0: endpoint {
+					remote-endpoint = <&mipi_demosaic_out>;
+				};
+			};
+		};
+	};
+
 	/* AD9361 PL 数据通路（地址与 tcl/02b_ad9361.tcl 一致） */
 	fpga_axi: fpga-axi@0 {
 		interrupt-parent = <&gic>;
@@ -159,6 +187,118 @@
 			clock-names = "sampl_clk";
 			dmas = <&tx_dma 0>;
 			dma-names = "tx";
+		};
+
+		/* ===== MIPI CSI-2 摄像头 (OV5647) —— 地址/中断与 tcl/02c_mipi_csi.tcl 一致 =====
+		 * 链路: ov5647(SBGGR10) -> csi2rx -> demosaic(RGB30) -> frmbuf -> HP3
+		 * 中断走 xlconcat_1 -> pl_ps_irq1[0..2] = GIC SPI 167/168/169
+		 * 时钟: 71=pl_clk0(100M 控制) 72=pl_clk1(300M 视频)
+		 */
+		mipi_csi2rx: csi2rx@80130000 {
+			compatible = "xlnx,mipi-csi2-rx-subsystem-5.0";
+			reg = <0x0 0x80130000 0x0 0x10000>;
+			interrupts = <0 167 4>;
+			clocks = <&zynqmp_clk 71>, <&zynqmp_clk 72>;
+			clock-names = "lite_aclk", "video_aclk";
+			xlnx,csi-pxl-format = <0x2b>; /* RAW10 */
+			xlnx,vfb;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					mipi_csi2rx_in: endpoint {
+						data-lanes = <1 2>;
+						remote-endpoint = <&ov5647_out>;
+					};
+				};
+				port@1 {
+					reg = <1>;
+					mipi_csi2rx_out: endpoint {
+						remote-endpoint = <&mipi_demosaic_in>;
+					};
+				};
+			};
+		};
+
+		mipi_demosaic: demosaic@80140000 {
+			compatible = "xlnx,v-demosaic";
+			reg = <0x0 0x80140000 0x0 0x10000>;
+			clocks = <&zynqmp_clk 72>;
+			reset-gpios = <&axi_gpio_mipi_rst 0 1>; /* GPIO_ACTIVE_LOW */
+			xlnx,max-width = <3840>;
+			xlnx,max-height = <2160>;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					xlnx,video-width = <10>;
+					mipi_demosaic_in: endpoint {
+						remote-endpoint = <&mipi_csi2rx_out>;
+					};
+				};
+				port@1 {
+					reg = <1>;
+					xlnx,video-width = <10>;
+					mipi_demosaic_out: endpoint {
+						remote-endpoint = <&vcap_mipi_in0>;
+					};
+				};
+			};
+		};
+
+		mipi_frmbuf_wr: frmbuf-wr@80150000 {
+			compatible = "xlnx,axi-frmbuf-wr-v2.2"; /* IP 2.4，寄存器兼容 v2.2 */
+			#dma-cells = <1>;
+			reg = <0x0 0x80150000 0x0 0x10000>;
+			interrupts = <0 168 4>;
+			clocks = <&zynqmp_clk 72>;
+			clock-names = "ap_clk";
+			reset-gpios = <&axi_gpio_mipi_rst 1 1>; /* GPIO_ACTIVE_LOW */
+			xlnx,vid-formats = "xbgr2101010"; /* V4L2_PIX_FMT_XBGR30 */
+			xlnx,max-width = <3840>;
+			xlnx,max-height = <2160>;
+			xlnx,pixels-per-clock = <1>;
+			xlnx,dma-addr-width = <32>;
+		};
+
+		cam_iic: i2c@80160000 {
+			compatible = "xlnx,xps-iic-2.00.a";
+			reg = <0x0 0x80160000 0x0 0x10000>;
+			interrupts = <0 169 4>;
+			clocks = <&zynqmp_clk 71>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			ov5647: camera@36 {
+				compatible = "ovti,ov5647";
+				reg = <0x36>;
+				clocks = <&cam_xvclk>;
+
+				port {
+					ov5647_out: endpoint {
+						data-lanes = <1 2>;
+						remote-endpoint = <&mipi_csi2rx_in>;
+					};
+				};
+			};
+		};
+
+		/* demosaic/frmbuf 的 ap_rst_n 复位控制（驱动强制要求 reset-gpios，
+		 * 位0=demosaic 位1=frmbuf，低有效，见 tcl/02c_mipi_csi.tcl 6b 节） */
+		axi_gpio_mipi_rst: gpio@80170000 {
+			compatible = "xlnx,axi-gpio-2.0", "xlnx,xps-gpio-1.00.a";
+			reg = <0x0 0x80170000 0x0 0x10000>;
+			#gpio-cells = <2>;
+			gpio-controller;
+			clocks = <&zynqmp_clk 71>;
+			xlnx,gpio-width = <0x2>;
+			xlnx,all-outputs = <0x1>;
 		};
 	};
 };

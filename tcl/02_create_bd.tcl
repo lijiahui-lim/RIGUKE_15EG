@@ -188,3 +188,6 @@ assign_bd_address -offset 0x80060000 -range 0x00010000 -target_address_space [ge
 
 # 14. AD9361 (AD-FMCOMMS3) 子系统注入（validate_bd_design 在其末尾执行）
 source ${script_dir}/02b_ad9361.tcl
+
+# 15. MIPI CSI-2 (OV5647) 子系统注入（validate_bd_design 在其末尾执行）
+source ${script_dir}/02c_mipi_csi.tcl

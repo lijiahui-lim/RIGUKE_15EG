@@ -146,6 +146,12 @@ if ! grep -q "^CONFIG_libiio=y" "$ROOTFS_CFG"; then
     echo "Enabled CONFIG_libiio in rootfs"
 fi
 
+# MIPI 摄像头 V4L2 调试工具（media-ctl / v4l2-ctl）
+if ! grep -q "^CONFIG_v4l-utils=y" "$ROOTFS_CFG"; then
+    echo "CONFIG_v4l-utils=y" >> "$ROOTFS_CFG"
+    echo "Enabled CONFIG_v4l-utils in rootfs"
+fi
+
 # ==========================================
 # Build
 # ==========================================

@@ -300,3 +300,21 @@ set_property IOSTANDARD LVCMOS33 [get_ports {EMIO_tri_io[4]}]
 # 注：C15 是 GND 脚，C14 为 bank49 真实 IO 且两版设计均未使用
 set_property PACKAGE_PIN C14 [get_ports {EMIO_tri_io[15]}]
 set_property IOSTANDARD LVCMOS33 [get_ports {EMIO_tri_io[15]}]
+
+# ----------------------------------------------------------------------------------
+# MIPI CSI-2 camera (OV5647) constraints
+# ----------------------------------------------------------------------------------
+# D-PHY 差分对（bank 67，HP bank 1.8V）不需要 XDC 约束：
+# MIPI CSI-2 Rx Subsystem 的 D-PHY 引脚位置是 IP 参数（见 tcl/02c_mipi_csi.tcl
+# 的 CONFIG.CLK_LANE_IO_LOC / DATA_LANE*_IO_LOC），IP 自带 IOSTANDARD 约束：
+#   MIPI1_CLK_P/N  = W12/W11 (B67_L1)   MIPI1_LAN0_P/N = T13/R13 (B67_L2)
+#   MIPI1_LAN1_P/N = U10/T10 (B67_L3)
+#
+# 传感器 I2C（bank 50，3.3V HR bank，板上有上拉）：
+#   CAM_SCL = J16 (B50_L12_P), CAM_SDA = J15 (B50_L12_N)
+set_property -dict {PACKAGE_PIN J16 IOSTANDARD LVCMOS33} [get_ports CAM_IIC_scl_io]
+set_property -dict {PACKAGE_PIN J15 IOSTANDARD LVCMOS33} [get_ports CAM_IIC_sda_io]
+
+# CAM1_CLK(G16)/CAM1_GPIO(H16) 已被 EMIO_tri_io[8]/[9] 占用（见上文）。
+# 树莓派兼容 OV5647 模组自带晶振（xvclk 25MHz 由 DT fixed-clock 声明），
+# LED 线不需要驱动，故不额外处理。
